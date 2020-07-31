@@ -4,7 +4,7 @@ using UnityEngine;
 
 public static class MeshGenerator {
 
-    public static MeshData GenerateTerrainMesh(float[,] heightMap, float heightMultiplier, AnimationCurve meshHeightCurve) {
+    public static MeshData GenerateTerrainMesh(float[,] heightMap, float heightMultiplier, AnimationCurve meshHeightCurve, int levelOfDetail) {
         // Get map dimensions.
         int mapWidth = heightMap.GetLength(0);
         int mapHeight = heightMap.GetLength(1);
@@ -13,11 +13,16 @@ public static class MeshGenerator {
         float topLeftX = (mapWidth - 1) / -2.0f;
         float topLeftZ = (mapHeight - 1) / 2.0f;
 
-        MeshData meshData = new MeshData(mapWidth, mapHeight);
+        // Range of the simplification element is 2 * the level of detail to one of the following pre-determined levels of detail: 2, 4, 6, 8, 10 ,12
+        // If level of detail is 0, we want full detail (1).
+        int meshSimplificationIncrement = (levelOfDetail == 0) ? 1 : levelOfDetail * 2;
+        int verticesPerEdge = (mapWidth - 1) / meshSimplificationIncrement + 1;
+
+        MeshData meshData = new MeshData(verticesPerEdge, verticesPerEdge);
         int vertexIndex = 0;
 
-        for (int y = 0; y < mapHeight; ++y) {
-            for (int x = 0; x < mapWidth; ++x) {
+        for (int y = 0; y < mapHeight; y += meshSimplificationIncrement) {
+            for (int x = 0; x < mapWidth; x += meshSimplificationIncrement) {
                 meshData.vertices[vertexIndex] = new Vector3(topLeftX + x, meshHeightCurve.Evaluate(heightMap[x, y]) * heightMultiplier, topLeftZ - y);
                 meshData.uvs[vertexIndex] = new Vector2(x / (float)mapWidth, y / (float)mapHeight);
 
@@ -33,8 +38,8 @@ public static class MeshGenerator {
                     //               |             \|
                     //               |--------------|
                     // vertexIndex + mapWidth      vertexIndex + mapWidth + 1
-                    meshData.AddTriangle(vertexIndex, vertexIndex + mapWidth + 1, vertexIndex + mapWidth);
-                    meshData.AddTriangle(vertexIndex + mapWidth + 1, vertexIndex, vertexIndex + 1);
+                    meshData.AddTriangle(vertexIndex, vertexIndex + verticesPerEdge + 1, vertexIndex + verticesPerEdge);
+                    meshData.AddTriangle(vertexIndex + verticesPerEdge + 1, vertexIndex, vertexIndex + 1);
                 }
 
                 vertexIndex++;

@@ -10,9 +10,11 @@ public class MapGenerator : MonoBehaviour {
     }
     public DrawMode drawMode;
 
-    public int mapWidth;
-    public int mapHeight;
-
+    const int mapChunkSize = 241; // Unity hard caps number of vertices per mesh to be 65,025 vertices (255 per edge)
+                                  // Formula ((mapWidth - 1) / LOD + 1) allows an optimal 241 vertices per edge, which works perfectly for LOD levels: 1, 2, 4, 6, 8, 10, and 12.
+                                  // Allowing for 7 different levels of detail.
+    [Range(0, 6)]
+    public int levelOfDetail;
     public float noiseScale;
 
     public int numNoiseOctaves;
@@ -32,15 +34,15 @@ public class MapGenerator : MonoBehaviour {
 
     public void GenerateMap() {
         // Retrieve noise map.
-        float[,] noiseMap = Noise.GenerateNoiseMap(mapWidth, mapHeight, mapSeed, noiseScale, numNoiseOctaves, persistence, lacunarity, offset);
+        float[,] noiseMap = Noise.GenerateNoiseMap(mapChunkSize, mapChunkSize, mapSeed, noiseScale, numNoiseOctaves, persistence, lacunarity, offset);
 
         // Generate color array for map.
-        Color[] textureColorMap = new Color[mapWidth * mapHeight];
+        Color[] textureColorMap = new Color[mapChunkSize * mapChunkSize];
 
-        for (int y = 0; y < mapHeight; ++y) {
-            for (int x = 0; x < mapWidth; ++x) {
+        for (int y = 0; y < mapChunkSize; ++y) {
+            for (int x = 0; x < mapChunkSize; ++x) {
                 float terrainHeight = noiseMap[x, y];
-                int colorIndex = x + mapWidth * y;
+                int colorIndex = x + mapChunkSize * y;
 
                 for (int i = 0; i < terrainRegions.Length; ++i) {
 
@@ -60,24 +62,16 @@ public class MapGenerator : MonoBehaviour {
             display.DrawTexture(TextureGenerator.TextureFromHeightMap(noiseMap));
         }
         else if (drawMode == DrawMode.ColorMap) {
-            display.DrawTexture(TextureGenerator.TextureFromColorMap(mapWidth, mapHeight, textureColorMap));
+            display.DrawTexture(TextureGenerator.TextureFromColorMap(mapChunkSize, mapChunkSize, textureColorMap));
         }
         else if (drawMode == DrawMode.Mesh) {
-            display.DrawMesh(MeshGenerator.GenerateTerrainMesh(noiseMap, meshHeightMultiplier, meshHeightCurve), TextureGenerator.TextureFromColorMap(mapWidth, mapHeight, textureColorMap));
+            display.DrawMesh(MeshGenerator.GenerateTerrainMesh(noiseMap, meshHeightMultiplier, meshHeightCurve, levelOfDetail), TextureGenerator.TextureFromColorMap(mapChunkSize, mapChunkSize, textureColorMap));
         }
     }
 
     // Automatically called when variables are changed in the inspector.
     // Used to verify (and clamp) data.
     private void OnValidate() {
-        if (mapWidth < 1) {
-            mapWidth = 1;
-        }
-
-        if (mapHeight < 1) {
-            mapHeight = 1;
-        }
-
         if (numNoiseOctaves < 0) {
             numNoiseOctaves = 0;
         }
