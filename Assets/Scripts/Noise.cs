@@ -8,6 +8,7 @@ public static class Noise {
     public static float[,] GenerateNoiseMap(int mapWidth, int mapHeight, int mapSeed, float noiseScale, int numNoiseOctaves, float persistence, float lacunarity, Vector2 manualOffset) {
         float[,] noiseMap = new float[mapWidth, mapHeight];
 
+        // Seeded generation.
         System.Random randomNumberGenerator = new System.Random(mapSeed);
         Vector2[] octaveOffets = new Vector2[numNoiseOctaves];
 
@@ -47,14 +48,14 @@ public static class Noise {
 
                     amplitude *= persistence; // Persistence should be between 0 and 1 - amplitude decreases with each octave.
                     frequency *= lacunarity;  // Lacunarity should be greater than 1 - frequency increases with each octave.
+                }
 
-                    // Get the highest and lowest noise map values.
-                    if (noiseHeight > maximumNoiseHeight) {
-                        maximumNoiseHeight = noiseHeight;
-                    }
-                    else if (noiseHeight < minimumNoiseHeight) {
-                        minimumNoiseHeight = noiseHeight;
-                    }
+                // Get the highest and lowest noise map values.
+                if (noiseHeight > maximumNoiseHeight) {
+                    maximumNoiseHeight = noiseHeight;
+                }
+                else if (noiseHeight < minimumNoiseHeight) {
+                    minimumNoiseHeight = noiseHeight;
                 }
 
                 noiseMap[x, y] = noiseHeight;
