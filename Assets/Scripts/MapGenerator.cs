@@ -10,9 +10,9 @@ public class MapGenerator : MonoBehaviour {
     }
     public DrawMode drawMode;
 
-    const int mapChunkSize = 241; // Unity hard caps number of vertices per mesh to be 65,025 vertices (255 per edge)
-                                  // Formula ((mapWidth - 1) / LOD + 1) allows an optimal 241 vertices per edge, which works perfectly for LOD levels: 1, 2, 4, 6, 8, 10, and 12.
-                                  // Allowing for 7 different levels of detail.
+    public const int mapChunkSize = 241; // Unity hard caps number of vertices per mesh to be 65,025 vertices (255 per edge)
+                                         // Formula ((mapWidth - 1) / LOD + 1) allows an optimal 241 vertices per edge, which works perfectly for LOD levels: 1, 2, 4, 6, 8, 10, and 12.
+                                         // Allowing for 7 different levels of detail.
     [Range(0, 6)]
     public int levelOfDetail;
     public float noiseScale;
