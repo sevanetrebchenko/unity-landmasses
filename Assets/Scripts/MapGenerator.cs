@@ -3,7 +3,7 @@ using UnityEngine;
 using System.Threading;
 
 public class MapGenerator : MonoBehaviour {
-    public enum DrawMode { NoiseMap, ColorMap, Mesh };
+    public enum DrawMode { NoiseMap, ColorMap, Mesh, FalloffMap };
     public DrawMode drawMode;
 
     public Noise.NormalizeMode normalizeMode;
@@ -26,12 +26,19 @@ public class MapGenerator : MonoBehaviour {
 
     public int mapSeed;
 
+    public bool useFalloff;
+    float[,] falloffMap;
+
     public bool autoUpdate;
 
     public TerrainTypes[] terrainRegions;
 
     Queue<MapThreadInformation<MapData>> mapDataThreadInfoQueue = new Queue<MapThreadInformation<MapData>>();
     Queue<MapThreadInformation<MeshData>> meshDataThreadInfoQueue = new Queue<MapThreadInformation<MeshData>>();
+
+    void Awake() {
+        falloffMap = FallOffGenerator.GenerateFalloffMap(mapChunkSize);
+    }
 
     public void DrawMapInEditor() {
         MapData mapData = GenerateMapData(Vector2.zero);
@@ -47,6 +54,9 @@ public class MapGenerator : MonoBehaviour {
         }
         else if (drawMode == DrawMode.Mesh) {
             display.DrawMesh(MeshGenerator.GenerateTerrainMesh(mapData.heightMap, meshHeightMultiplier, meshHeightCurve, editorLevelOfDetail), TextureGenerator.TextureFromColorMap(mapChunkSize, mapChunkSize, mapData.colorMap));
+        }
+        else if (drawMode == DrawMode.FalloffMap) {
+            display.DrawTexture(TextureGenerator.TextureFromHeightMap(falloffMap));
         }
     }
 
@@ -119,6 +129,10 @@ public class MapGenerator : MonoBehaviour {
 
         for (int y = 0; y < mapChunkSize; ++y) {
             for (int x = 0; x < mapChunkSize; ++x) {
+
+                if (useFalloff) {
+                    noiseMap[x, y] = Mathf.Clamp01(noiseMap[x, y] - falloffMap[x, y]);
+                }
                 float terrainHeight = noiseMap[x, y];
                 int colorIndex = x + mapChunkSize * y;
 
@@ -149,6 +163,8 @@ public class MapGenerator : MonoBehaviour {
         if (lacunarity < 1.0f) {
             lacunarity = 1.0f;
         }
+
+        falloffMap = FallOffGenerator.GenerateFalloffMap(mapChunkSize);
     }
 
     // Generic function as threading will be done for both map and mesh generation.
