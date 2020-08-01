@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 public static class FallOffGenerator
 {
@@ -22,6 +19,7 @@ public static class FallOffGenerator
         return falloffMap;
     }
 
+    // Function is expensive but is only used once at the start of the game, so there is little performance implications.
     private static float Evaluate(float value) {
         float a = 3;
         float b = 2.2f;
