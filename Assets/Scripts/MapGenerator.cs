@@ -3,18 +3,14 @@ using UnityEngine;
 using System.Threading;
 
 public class MapGenerator : MonoBehaviour {
-    public enum DrawMode {
-        NoiseMap,
-        ColorMap,
-        Mesh
-    }
+    public enum DrawMode { NoiseMap, ColorMap, Mesh };
     public DrawMode drawMode;
 
     public const int mapChunkSize = 241; // Unity hard caps number of vertices per mesh to be 65,025 vertices (255 per edge)
                                          // Formula ((mapWidth - 1) / LOD + 1) allows an optimal 241 vertices per edge, which works perfectly for LOD levels: 1, 2, 4, 6, 8, 10, and 12.
                                          // Allowing for 7 different levels of detail.
     [Range(0, 6)]
-    public int levelOfDetail;
+    public int editorLevelOfDetail;
     public float noiseScale;
 
     public int numNoiseOctaves;
@@ -36,7 +32,7 @@ public class MapGenerator : MonoBehaviour {
     Queue<MapThreadInformation<MeshData>> meshDataThreadInfoQueue = new Queue<MapThreadInformation<MeshData>>();
 
     public void DrawMapInEditor() {
-        MapData mapData = GenerateMapData();
+        MapData mapData = GenerateMapData(Vector2.zero);
 
         // Draw map.
         MapDisplay display = FindObjectOfType<MapDisplay>();
@@ -48,7 +44,7 @@ public class MapGenerator : MonoBehaviour {
             display.DrawTexture(TextureGenerator.TextureFromColorMap(mapChunkSize, mapChunkSize, mapData.colorMap));
         }
         else if (drawMode == DrawMode.Mesh) {
-            display.DrawMesh(MeshGenerator.GenerateTerrainMesh(mapData.heightMap, meshHeightMultiplier, meshHeightCurve, levelOfDetail), TextureGenerator.TextureFromColorMap(mapChunkSize, mapChunkSize, mapData.colorMap));
+            display.DrawMesh(MeshGenerator.GenerateTerrainMesh(mapData.heightMap, meshHeightMultiplier, meshHeightCurve, editorLevelOfDetail), TextureGenerator.TextureFromColorMap(mapChunkSize, mapChunkSize, mapData.colorMap));
         }
     }
 
@@ -56,18 +52,18 @@ public class MapGenerator : MonoBehaviour {
     // Map data threading.
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    public void RequestMapData(System.Action<MapData> callbackFunction) {
+    public void RequestMapData(System.Action<MapData> callbackFunction, Vector2 centerPoint) {
         // Create lambda function for the data processing function.
         ThreadStart threadStart = delegate {
-            MapDataThread(callbackFunction);
+            MapDataThread(callbackFunction, centerPoint);
         };
 
         // Start the function on a different thread.
         new Thread(threadStart).Start();
     }
 
-    private void MapDataThread(System.Action<MapData> callbackFunction) {
-        MapData mapData = GenerateMapData();
+    private void MapDataThread(System.Action<MapData> callbackFunction, Vector2 centerPoint) {
+        MapData mapData = GenerateMapData(centerPoint);
 
         // Lock queue to preserve access order.
         lock (mapDataThreadInfoQueue) {
@@ -78,17 +74,17 @@ public class MapGenerator : MonoBehaviour {
     ////////////////////////////////////////////////////////////////////////////////////////////////////
     // Mesh data threading.
     ////////////////////////////////////////////////////////////////////////////////////////////////////
-    public void RequestMeshData(MapData mapData, System.Action<MeshData> callbackFunction) {
+    public void RequestMeshData(System.Action<MeshData> callbackFunction, MapData mapData, int levelOfDetail) {
         // Create lambda function for the data processing function.
         ThreadStart threadStart = delegate {
-            MeshDataThread(callbackFunction, mapData);
+            MeshDataThread(callbackFunction, mapData, levelOfDetail);
         };
 
         // Start the function on a different thread.
         new Thread(threadStart).Start();
     }
 
-    private void MeshDataThread(System.Action<MeshData> callbackFunction, MapData mapData) {
+    private void MeshDataThread(System.Action<MeshData> callbackFunction, MapData mapData, int levelOfDetail) {
         MeshData meshData = MeshGenerator.GenerateTerrainMesh(mapData.heightMap, meshHeightMultiplier, meshHeightCurve, levelOfDetail);
 
         lock (meshDataThreadInfoQueue) {
@@ -112,9 +108,9 @@ public class MapGenerator : MonoBehaviour {
         }
     }
 
-    private MapData GenerateMapData() {
+    private MapData GenerateMapData(Vector2 centerPoint) {
         // Retrieve noise map.
-        float[,] noiseMap = Noise.GenerateNoiseMap(mapChunkSize, mapChunkSize, mapSeed, noiseScale, numNoiseOctaves, persistence, lacunarity, offset);
+        float[,] noiseMap = Noise.GenerateNoiseMap(mapChunkSize, mapChunkSize, mapSeed, noiseScale, numNoiseOctaves, persistence, lacunarity, centerPoint + offset);
 
         // Generate color array for map.
         Color[] textureColorMap = new Color[mapChunkSize * mapChunkSize];
