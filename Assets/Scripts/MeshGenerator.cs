@@ -4,7 +4,10 @@ using UnityEngine;
 
 public static class MeshGenerator {
 
-    public static MeshData GenerateTerrainMesh(float[,] heightMap, float heightMultiplier, AnimationCurve meshHeightCurve, int levelOfDetail) {
+    public static MeshData GenerateTerrainMesh(float[,] heightMap, float heightMultiplier, AnimationCurve _meshHeightCurve, int levelOfDetail) {
+        // Create a new animation curve copy to use for thread.
+        AnimationCurve meshHeightCurve = new AnimationCurve(_meshHeightCurve.keys);
+
         // Get map dimensions.
         int mapWidth = heightMap.GetLength(0);
         int mapHeight = heightMap.GetLength(1);

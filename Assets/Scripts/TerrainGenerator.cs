@@ -1,10 +1,13 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
 
 public class TerrainGenerator : MonoBehaviour
 {
     public const float maxViewDistance = 450;
+    public Material mapMaterial;
+    static MapGenerator mapGenerator;
     public Transform viewer;
     public static Vector2 viewerPosition;
 
@@ -15,6 +18,7 @@ public class TerrainGenerator : MonoBehaviour
     List<TerrainChunk> previousFrameChunks = new List<TerrainChunk>();
 
     private void Start() {
+        mapGenerator = FindObjectOfType<MapGenerator>();
         chunkSize = MapGenerator.mapChunkSize - 1;
         numVisibleChunks = Mathf.RoundToInt(maxViewDistance / chunkSize);
     }
@@ -48,7 +52,7 @@ public class TerrainGenerator : MonoBehaviour
                     }
                 }
                 else {
-                    terrainChunks.Add(viewedChunkCoordinate, new TerrainChunk(viewedChunkCoordinate, chunkSize, transform));
+                    terrainChunks.Add(viewedChunkCoordinate, new TerrainChunk(viewedChunkCoordinate, chunkSize, transform, mapMaterial));
                 }
             }
         }
@@ -59,20 +63,32 @@ public class TerrainGenerator : MonoBehaviour
         Vector2 chunkPosition;
         Bounds chunkBounds;
 
+        MapData mapData; // Terrain height / color information.
+
+        MeshRenderer meshRenderer;
+        MeshFilter meshFilter;
+
         // Terrain chunk takes in a normalized 'coordinate' based on the number of chunks it is away from the viewer position.
         // Size of the chunk in units is passed in to scale the world position correctly.
-        public TerrainChunk(Vector2 coordinate, int size, Transform parent) {
+        public TerrainChunk(Vector2 coordinate, int size, Transform parent, Material material) {
             chunkPosition = coordinate * size;
             chunkBounds = new Bounds(chunkPosition, Vector2.one * size);
-            meshObject = GameObject.CreatePrimitive(PrimitiveType.Plane);
+
+            meshObject = new GameObject("Terrain chunk");
+            meshRenderer = meshObject.AddComponent<MeshRenderer>();
+            meshFilter = meshObject.AddComponent<MeshFilter>();
 
             // Set chunk world position.
             Vector3 worldPosition = new Vector3(chunkPosition.x, 0, chunkPosition.y);
             meshObject.transform.position = worldPosition;
-            meshObject.transform.localScale = Vector3.one * size / 10; // Primitive plane is 10 units by default.
             meshObject.transform.parent = parent;
 
+            meshRenderer.material = material;
+
             SetVisible(false);
+
+            // Register callback.
+            mapGenerator.RequestMapData(OnMapDataReceived);
         }
 
         public void UpdateTerrainChunk() {
@@ -87,6 +103,14 @@ public class TerrainGenerator : MonoBehaviour
 
         public bool IsVisible() {
             return meshObject.activeSelf;
+        }
+
+        private void OnMapDataReceived(MapData mapData) {
+            mapGenerator.RequestMeshData(mapData, OnMeshDataReceived);
+        }
+
+        private void OnMeshDataReceived(MeshData meshData) {
+            meshFilter.mesh = meshData.CreateMesh();
         }
     }
 }
