@@ -6,13 +6,15 @@ public class MapGenerator : MonoBehaviour {
     public enum DrawMode { NoiseMap, ColorMap, Mesh };
     public DrawMode drawMode;
 
+    public Noise.NormalizeMode normalizeMode;
+
     public const int mapChunkSize = 241; // Unity hard caps number of vertices per mesh to be 65,025 vertices (255 per edge)
                                          // Formula ((mapWidth - 1) / LOD + 1) allows an optimal 241 vertices per edge, which works perfectly for LOD levels: 1, 2, 4, 6, 8, 10, and 12.
                                          // Allowing for 7 different levels of detail.
     [Range(0, 6)]
     public int editorLevelOfDetail;
     public float noiseScale;
-
+    [Range(1, 20)]
     public int numNoiseOctaves;
     [Range(0, 1)]
     public float persistence;
@@ -110,7 +112,7 @@ public class MapGenerator : MonoBehaviour {
 
     private MapData GenerateMapData(Vector2 centerPoint) {
         // Retrieve noise map.
-        float[,] noiseMap = Noise.GenerateNoiseMap(mapChunkSize, mapChunkSize, mapSeed, noiseScale, numNoiseOctaves, persistence, lacunarity, centerPoint + offset);
+        float[,] noiseMap = Noise.GenerateNoiseMap(mapChunkSize, mapChunkSize, mapSeed, noiseScale, numNoiseOctaves, persistence, lacunarity, centerPoint + offset, normalizeMode);
 
         // Generate color array for map.
         Color[] textureColorMap = new Color[mapChunkSize * mapChunkSize];
@@ -123,9 +125,11 @@ public class MapGenerator : MonoBehaviour {
                 for (int i = 0; i < terrainRegions.Length; ++i) {
 
                     // Found the region the current height the point at (x, y) belongs to.
-                    if (terrainHeight <= terrainRegions[i].startingHeight) {
+                    if (terrainHeight >= terrainRegions[i].startingHeight) {
                         textureColorMap[colorIndex] = terrainRegions[i].color;
-                        break;
+                    }
+                    else {
+
                     }
                 }
             }

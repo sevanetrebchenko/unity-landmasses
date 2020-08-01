@@ -7,6 +7,7 @@ public class TerrainGenerator : MonoBehaviour
 {
     const float movementThresholdForChunkUpdate = 25.0f;
     const float sqrMovementThresholdForChunkUpdate = movementThresholdForChunkUpdate * movementThresholdForChunkUpdate;
+    const float scale = 5.0f;
 
     public LevelOfDetailInformation[] detailLevels;
     public static float maxViewDistance;
@@ -21,7 +22,7 @@ public class TerrainGenerator : MonoBehaviour
     int numVisibleChunks;
 
     Dictionary<Vector2, TerrainChunk> terrainChunks = new Dictionary<Vector2, TerrainChunk>(); // Position -> Chunk
-    List<TerrainChunk> previousFrameChunks = new List<TerrainChunk>();
+    static List<TerrainChunk> previousFrameChunks = new List<TerrainChunk>();
 
     private void Start() {
         mapGenerator = FindObjectOfType<MapGenerator>();
@@ -34,7 +35,7 @@ public class TerrainGenerator : MonoBehaviour
     }
 
     private void Update() {
-        viewerPosition = new Vector2(viewer.position.x, viewer.position.z);
+        viewerPosition = new Vector2(viewer.position.x, viewer.position.z) / scale;
 
         if ((previousViewerPosition - viewerPosition).sqrMagnitude > sqrMovementThresholdForChunkUpdate) {
             previousViewerPosition = viewerPosition;
@@ -59,11 +60,6 @@ public class TerrainGenerator : MonoBehaviour
 
                 if (terrainChunks.ContainsKey(viewedChunkCoordinate)) {
                     terrainChunks[viewedChunkCoordinate].UpdateTerrainChunk();
-
-                    // Add to list of visible terrain chunks if this chunk is visible.
-                    if (terrainChunks[viewedChunkCoordinate].IsVisible()) {
-                        previousFrameChunks.Add(terrainChunks[viewedChunkCoordinate]);
-                    }
                 }
                 else {
                     terrainChunks.Add(viewedChunkCoordinate, new TerrainChunk(viewedChunkCoordinate, chunkSize, detailLevels, transform, mapMaterial));
@@ -110,7 +106,8 @@ public class TerrainGenerator : MonoBehaviour
             meshFilter = meshObject.AddComponent<MeshFilter>();
 
             // Set chunk world position.
-            meshObject.transform.position = worldPosition;
+            meshObject.transform.position = worldPosition * scale;
+            meshObject.transform.localScale = Vector3.one * scale;
             meshObject.transform.parent = parent;
             meshRenderer.material = material;
 
@@ -153,6 +150,8 @@ public class TerrainGenerator : MonoBehaviour
                             lodMesh.RequestMesh(mapData);
                         }
                     }
+
+                    previousFrameChunks.Add(this);
                 }
                 SetVisible(chunkIsVisible);
             }
